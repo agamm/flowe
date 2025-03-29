@@ -1,4 +1,5 @@
 # Flowe
+<img width="591" alt="image" src="https://github.com/user-attachments/assets/9c8c5bf0-9cfd-4364-ba9f-cab1bc8a9da3" />
 
 Flowe is a developer tool for visualizing and debugging program flows. Track, visualize, and debug complex workflows across your application with minimal overhead.
 
