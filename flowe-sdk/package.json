@@ -1,0 +1,37 @@
+{
+	"name": "flowe-sdk",
+	"version": "0.1.22",
+	"type": "module",
+	"description": "SDK for interacting with Flowe CLI and workflow engine",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/agam/flowe.git",
+		"directory": "flowe-sdk"
+	},
+	"keywords": [
+		"workflow",
+		"sdk",
+		"debug",
+		"visualization",
+		"graph",
+		"cli"
+	],
+	"scripts": {
+		"build": "tsc --build --force",
+		"clean": "rimraf dist",
+		"prebuild": "npm run clean",
+		"example": "npm run build && node dist/examples/example.js",
+		"performance": "npm run build && node dist/examples/performance-test-final.js",
+		"test": "vitest",
+		"test:watch": "vitest",
+		"test:coverage": "vitest run --coverage"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.19",
+		"typescript": "^5.3.3",
+		"vitest": "^3.0.4",
+		"rimraf": "^5.0.5"
+	}
+}

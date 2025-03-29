@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "outDir": "dist",
+    "target": "ES2020",
+    "declaration": true,
+    "sourceMap": true,
+    "moduleResolution": "Bundler",
+    "noEmit": false
+  },
+  "include": ["cli/**/*"],
+  "exclude": ["node_modules", ".next", "dist"]
+} 
