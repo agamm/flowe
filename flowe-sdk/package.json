@@ -1,6 +1,6 @@
 {
 	"name": "flowe-sdk",
-	"version": "0.1.22",
+	"version": "0.2.1",
 	"type": "module",
 	"description": "SDK for interacting with Flowe CLI and workflow engine",
 	"main": "dist/index.js",

@@ -1,21 +1,56 @@
-### Flowe CLI
+# Flowe CLI
 
-1. Start server: `flowe start`
+Command-line tool for running the Flowe server.
 
 
-### Development
+## Commands
 
-Next start (skip cli start): `npm run dev`
-Run like so: `npm run cli:dev -- --version`
+```bash
+# Start the Flowe server
+flowe start
 
-#### Local install (dev)
-`npm version patch`
-`npm run build && npm unlink -g && npm link && flowe start`
+# Start with custom port (default: 27182)
+flowe start -p 3000
 
-### Port Configuration
+# Start with custom host (default: localhost)
+flowe start -H 0.0.0.0
 
-The application uses port 27182 by default. This port is hardcoded in:
-- Server: `cli/cli.ts` and `package.json` dev script
-- SDK: `src/flowe/index.ts`
+# Show version
+flowe --version
+```
 
-If you need to change the port, you'll need to update it in these locations.
+## Development
+
+```bash
+# Start the Next.js development server
+npm run dev
+
+# Run CLI in development mode
+npm run cli:dev -- start
+
+# Check CLI version
+npm run cli:dev -- --version
+```
+
+## Testing Local Installation
+
+```bash
+# Build and install locally
+npm version patch
+npm run build && npm unlink -g && npm link
+
+# Run local installation
+flowe start
+```
+
+## Testing
+`npm run test`
+
+## Port Configuration
+
+The application uses port 27182 by default. This port is defined in:
+- CLI: `cli/cli.ts`
+- Server: `package.json` dev script
+- SDK: `flowe-sdk/src/flowe/index.ts`
+
+If you need to change the port, update it in all these locations or open a PR for `--port` ;)
