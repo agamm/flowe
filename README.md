@@ -16,6 +16,7 @@ Flowe is a developer tool for visualizing and debugging program flows. Track, vi
 npm install -g flowe # Installs both the CLI server and SDK
 
 # Install SDK in your project
+npm install flowe
 ```
 
 ## Usage
