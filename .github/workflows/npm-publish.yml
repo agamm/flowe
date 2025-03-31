@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths-ignore:
+      - '**.md'
       - '.github/**'
       - '!.github/workflows/npm-publish.yml'
 
