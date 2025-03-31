@@ -1,4 +1,6 @@
 # Flowe
+![NPM Last Update](https://img.shields.io/npm/last-update/flowe)
+
 <img width="591" alt="image" src="https://github.com/user-attachments/assets/9c8c5bf0-9cfd-4364-ba9f-cab1bc8a9da3" />
 
 Flowe is a developer tool for visualizing and debugging program flows. Track, visualize, and debug complex workflows across your application with minimal overhead.
@@ -16,6 +18,7 @@ Flowe is a developer tool for visualizing and debugging program flows. Track, vi
 npm install -g flowe # Installs both the CLI server and SDK
 
 # Install SDK in your project
+npm install flowe
 ```
 
 ## Usage
