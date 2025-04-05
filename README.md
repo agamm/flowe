@@ -39,6 +39,9 @@ f.setEnabled(true);
 const flowId = f.start('process-name', { input: 'data' });
 
 // Do work...
+f.start('sub-process', {foo: 'bar'}, 'process-name'); // process-name is the parent, can be also an array if multiple parents
+...
+f.end('sub-process'); // you can always reference a flow with a string or the return variable from .start()
 
 // End the flow with result
 f.end(flowId, { result: 'success' });
