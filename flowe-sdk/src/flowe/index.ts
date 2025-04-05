@@ -345,5 +345,14 @@ export class Flowe {
 
 export const f = new Flowe();
 
+/**
+ * Factory function to create a new Flowe instance
+ * @param options Configuration options for Flowe
+ * @returns A new Flowe instance
+ */
+export function createFlowe(options?: FloweOptions): Flowe {
+	return new Flowe(options);
+}
+
 // Make f the default export with proper typing
 export default f;

@@ -141,25 +141,20 @@ if (existsSync(nextDir)) {
 
 // Create SDK wrapper files
 const wrapperContent = `// This file is auto-generated. Do not edit manually.
-import { createFlowe } from './sdk/index.js';
+import { createFlowe, f } from './sdk/index.js';
+import { Queue } from './sdk/queue.js';
 
-export { createFlowe } from './sdk/index.js';
-export { Queue } from './sdk/queue.js';
-
-const f = createFlowe();
-export { f };
+export { createFlowe, f, Queue };
 export default f;
 `;
 writeFileSync(join(distDir, 'sdk.js'), wrapperContent);
 
 const typeDefinitions = `// This file is auto-generated. Do not edit manually.
-export * from './sdk/index.js';
-import { Flowe } from './sdk/index.js';
-export { Queue } from './sdk/queue.js';
-export type { QueueItem } from './sdk/queue.js';
+import { createFlowe, f, Flowe, FloweOptions } from './sdk/index.js';
+import { Queue, QueueItem } from './sdk/queue.js';
 
-declare const f: Flowe;
-export { f };
+export { createFlowe, f, Flowe, Queue };
+export type { FloweOptions, QueueItem };
 export default f;
 `;
 writeFileSync(join(distDir, 'sdk.d.ts'), typeDefinitions);
