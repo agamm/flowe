@@ -64,7 +64,7 @@ export function useFlow(id: string) {
         eventSourceRef.current.close();
       }
 
-      const eventSource = new EventSource(`/api/flow/stream?${id.includes('-') ? 'flowId' : 'id'}=${id}`);
+      const eventSource = new EventSource(`/api/flow/stream?flowId=${id}`);
       eventSourceRef.current = eventSource;
       
       eventSource.onopen = () => {

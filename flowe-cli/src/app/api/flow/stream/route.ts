@@ -1,6 +1,5 @@
 import { NextRequest } from "next/server";
-import { kv } from "@/lib/keyv";
-import type { Process, Flow } from "@/types/types";
+import type { Flow } from "@/types/types";
 import { fetchFlowById, createSSEHeaders } from "../../utils";
 
 const SSE_POLL_INTERVAL = 500; 
@@ -47,50 +46,20 @@ async function streamFlow(
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const flowId = searchParams.get('flowId');
-  const id = searchParams.get('id');
   
-  let targetFlowId = flowId;
-  
-  // If process ID is provided but not flow ID, lookup the process to get its flow ID
-  if (id && !flowId) {
-    try {
-      const process = await kv.get(id) as Process | null;
-      
-      if (!process) {
-        return new Response(
-          JSON.stringify({ error: "Process not found" }),
-          { status: 404, headers: { 'content-type': 'application/json' } }
-        );
-      }
-      
-      if (!process.flowId) {
-        return new Response(
-          JSON.stringify({ error: "Process has no flowId" }),
-          { status: 400, headers: { 'content-type': 'application/json' } }
-        );
-      }
-      
-      targetFlowId = process.flowId;
-    } catch (error) {
-      console.error('Error looking up process:', error);
-      return new Response(
-        JSON.stringify({ error: "Failed to look up process" }),
-        { status: 500, headers: { 'content-type': 'application/json' } }
-      );
-    }
-  }
-  
-  if (!targetFlowId) {
+  if (!flowId) {
     return new Response(
-      JSON.stringify({ error: "Either flowId or id parameter is required" }),
+      JSON.stringify({ error: "flowId parameter is required" }),
       { status: 400, headers: { 'content-type': 'application/json' } }
     );
   }
   
+  console.log(`Streaming flow with ID: ${flowId}`);
+  
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      await streamFlow(targetFlowId!, controller, encoder, request.signal);
+      await streamFlow(flowId, controller, encoder, request.signal);
     }
   });
   
