@@ -5,7 +5,7 @@ import { useFlow } from "@/hooks/use-flow";
 import { ProcessFlow } from "@/components/process-flow";
 import { JsonView } from "@/components/json-view";
 import { Process } from "@/types/types";
-import { Clock, RefreshCw } from "lucide-react";
+import { Clock, Download, RefreshCw } from "lucide-react";
 import { notFound } from "next/navigation";
 
 export default function FlowPage({
@@ -79,6 +79,21 @@ export default function FlowPage({
   // Count pending processes
   const pendingProcesses = flow.processes.filter(p => p.status === "pending").length;
 
+  const handleDownloadFlow = () => {
+    if (!flow) return;
+    
+    const jsonString = JSON.stringify(flow, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `flow-${id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="p-6">
       <div className="mb-4 flex justify-between items-center">
@@ -97,12 +112,24 @@ export default function FlowPage({
           </div>
         </div>
         
-        {isStreaming && (
-          <div className="flex items-center bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm animate-pulse">
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            Updating...
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleDownloadFlow}
+            className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground rounded-md border hover:bg-accent/50"
+            title="Download Flow JSON"
+          >
+            <Download className="h-4 w-4" />
+            <span>Download Flow</span>
+          </button>
+          
+          {isStreaming && (
+            <div className="flex items-center bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-sm animate-pulse">
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Updating...
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="h-[600px] border rounded-lg overflow-hidden">

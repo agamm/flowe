@@ -24,6 +24,7 @@
 		"prebuild": "npm run clean",
 		"example": "npm run build && node dist/examples/example.js",
 		"performance": "npm run build && node dist/examples/performance-test-final.js",
+		"race": "npm run build && node dist/examples/exampleRace.js",
 		"test": "vitest",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"

@@ -267,61 +267,33 @@ export class Flowe {
 	private findParentByStackTrace(stackTrace: StackFrame[]): string | undefined {
 		if (!stackTrace.length) return undefined;
 		
-		// Convert map to array for filtering
-		const processes = Array.from(globalFlows.values());
+		// Transform current stack trace to string (excluding the f.start call)
+		const normalizeStack = (stack: StackFrame[]): string => 
+			stack.slice(0, -1).map(frame => `${frame.file}:${frame.func}`).join('->');
 		
-		// Consider only active processes in the current flow
-		const flowProcesses = processes.filter(process => 
-			process.flowId === this.activeFlowId &&
-			!process.completed
-		);
+		const currentStackString = normalizeStack(stackTrace);
 		
-		if (flowProcesses.length === 0) return undefined;
+		// Find all potential parent processes with valid stack traces ending in f.start()
+		const potentialParents = Array.from(globalFlows.values())
+			.filter(process => 
+				process.flowId === this.activeFlowId && 
+				!process.completed &&
+				process.stackTrace?.length &&
+				process.stackTrace[process.stackTrace.length - 1].func.includes('start') &&
+				(process.stackTrace[process.stackTrace.length - 1].func.includes('Flowe.') || 
+				 process.stackTrace[process.stackTrace.length - 1].func.includes('f.'))
+			);
 		
-		// Get the call path (excluding Flowe internal functions)
-		const currentCallPath = stackTrace
-			.map(frame => frame.func)
-			.filter(func => !func.includes('Flowe') && !func.includes('getStackTrace'));
+		if (!potentialParents.length) return undefined;
 		
-		if (currentCallPath.length === 0) return undefined;
-		
-		let bestMatchId: string | undefined;
-		let bestMatchDepth = 0;
-		let bestMatchTime = 0;
-		
-		// Find the process with the longest matching call path
-		for (const process of flowProcesses) {
-			if (!process.stackTrace?.length) continue;
-			
-			// Get the process call path (excluding Flowe internal functions)
-			const processCallPath = process.stackTrace
-				.map(frame => frame.func)
-				.filter(func => !func.includes('Flowe') && !func.includes('getStackTrace'));
-			
-			if (processCallPath.length === 0) continue;
-			
-			// Find longest common prefix in the call paths (starting from index 0)
-			let matchDepth = 0;
-			while (
-				matchDepth < Math.min(currentCallPath.length, processCallPath.length) &&
-				currentCallPath[matchDepth] === processCallPath[matchDepth]
-			) {
-				matchDepth++;
-			}
-			
-			// Only consider it a match if we have a common ancestor path
-			if (matchDepth > 0) {
-				// Prioritize by match depth, then by recency
-				if (matchDepth > bestMatchDepth || 
-					(matchDepth === bestMatchDepth && process.createdAt > bestMatchTime)) {
-					bestMatchId = process.id;
-					bestMatchDepth = matchDepth;
-					bestMatchTime = process.createdAt;
-				}
-			}
-		}
-		
-		return bestMatchId;
+		// Find the best parent (longest stack trace prefix that's not identical to current)
+		return potentialParents
+			.map(process => ({ 
+				id: process.id, 
+				stack: normalizeStack(process.stackTrace!)
+			}))
+			.filter(entry => entry.stack !== currentStackString && currentStackString.startsWith(entry.stack))
+			.sort((a, b) => b.stack.length - a.stack.length)[0]?.id;
 	}
 
 	/**

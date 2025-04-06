@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { ChevronDown, ChevronRight, Clock, Download } from "lucide-react";
 import React, { useState } from "react";
 import { StackFrame } from "@/types/types";
 
@@ -114,7 +114,7 @@ function StackTraceView({ frames }: { frames: StackFrame[] | undefined }) {
 							<span className="font-mono text-gray-700">{frame.file.split('/').pop()}</span>
 							<span className="text-gray-400">:</span>
 							<span className="text-gray-600">{frame.line}</span>
-							<span className="text-gray-400">)</span> 1
+							<span className="text-gray-400">)</span>
 						</span>
 					</React.Fragment>
 				))}
@@ -201,6 +201,19 @@ function JsonContent({ data }: { data: unknown }) {
 export function JsonView({ data, title, timing, className }: JsonViewProps) {
 	const [isExpanded, setIsExpanded] = useState(true);
 
+	const handleDownload = () => {
+		const jsonString = JSON.stringify(data, null, 2);
+		const blob = new Blob([jsonString], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = `${title.replace(/\s+/g, "-").toLowerCase()}.json`;
+		document.body.appendChild(a);
+		a.click();
+		document.body.removeChild(a);
+		URL.revokeObjectURL(url);
+	};
+
 	return (
 		<div
 			className={cn(
@@ -209,27 +222,43 @@ export function JsonView({ data, title, timing, className }: JsonViewProps) {
 			)}
 			data-testid="json-view-container"
 		>
-			<button
-				type="button"
-				onClick={() => setIsExpanded(!isExpanded)}
+			<div
 				className="flex w-full items-center justify-between border-b px-4 py-3 hover:bg-accent/50"
 				data-testid="json-view-header"
 			>
-				<div className="flex items-center gap-2">
-					{isExpanded ? (
-						<ChevronDown className="h-4 w-4" />
-					) : (
-						<ChevronRight className="h-4 w-4" />
-					)}
+				<div 
+					className="flex items-center gap-2 cursor-pointer"
+					onClick={() => setIsExpanded(!isExpanded)}
+				>
+					<button
+						type="button"
+						aria-label={isExpanded ? "Collapse" : "Expand"}
+					>
+						{isExpanded ? (
+							<ChevronDown className="h-4 w-4" />
+						) : (
+							<ChevronRight className="h-4 w-4" />
+						)}
+					</button>
 					<h3 className="font-medium">{title}</h3>
 				</div>
-				{timing && (
-					<div className="flex items-center gap-1 text-sm text-muted-foreground">
-						<Clock className="h-4 w-4" />
-						<span>{formatDuration(timing.start, timing.end)}</span>
-					</div>
-				)}
-			</button>
+				<div className="flex items-center gap-3">
+					{timing && (
+						<div className="flex items-center gap-1 text-sm text-muted-foreground">
+							<Clock className="h-4 w-4" />
+							<span>{formatDuration(timing.start, timing.end)}</span>
+						</div>
+					)}
+					<button
+						type="button"
+						onClick={handleDownload}
+						className="flex items-center text-muted-foreground hover:text-foreground"
+						title="Download JSON"
+					>
+						<Download className="h-4 w-4" />
+					</button>
+				</div>
+			</div>
 			{isExpanded && (
 				<div className="p-4 font-mono text-sm" data-testid="json-view-content">
 					<JsonContent data={data} />
@@ -238,3 +267,5 @@ export function JsonView({ data, title, timing, className }: JsonViewProps) {
 		</div>
 	);
 }
+
+
