@@ -248,7 +248,10 @@ export class Flowe {
 				const file = match[2] || match[4] || '';
 				const lineNum = match[3] || match[5] || '0';
 				
-				return { file, func, line: lineNum } as StackFrame;
+				// Remove "async " prefix from function names
+				const cleanFunc = func.replace(/^async\s+/, '');
+				
+				return { file, func: cleanFunc, line: lineNum } as StackFrame;
 			})
 			.filter((item): item is StackFrame => 
 				item !== null && 
