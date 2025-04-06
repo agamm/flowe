@@ -265,10 +265,8 @@ function createFlowElements(flow: Flow): {
   // Create nodes
   const nodes = processes.map(process => {
     const position = nodePositions.get(process.id) || { x: 0, y: 0 };
-    const nodeLevel = nodeLevels.get(process.id) || 0;
-    // Use flowName for display when available, fall back to other sources
-    const processName = (process.flowName && nodeLevel === 0) ? process.flowName : 
-                       (process.arguments as { name?: string })?.name || process.id.split('-')[0];
+    // Always use the process ID for naming
+    const processName = process.id;
     
     // Node styling
     const nodeColor = nodePathColors.get(process.id) || "#d1d5db";
