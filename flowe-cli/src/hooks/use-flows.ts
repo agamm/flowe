@@ -8,20 +8,58 @@ export function useFlows() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
-  const lastFlowsDataRef = useRef<string>("");
   const hasLoadedRef = useRef(false);
 
   const updateFlows = useCallback((newFlows: Flow[]) => {
-    const newFlowsStr = JSON.stringify(newFlows);
-				console.log("New flows", newFlows);
-    if (newFlowsStr !== lastFlowsDataRef.current) {
-      lastFlowsDataRef.current = newFlowsStr;
+    // Skip empty flows
+    if (!newFlows.length) return;
+    
+    // Quick checks for obvious differences
+    const newFlowIds = newFlows.map(f => f.flowId).sort().join(',');
+    const oldFlowIds = flows.map(f => f.flowId).sort().join(',');
+    
+    // New flow arrived or number of flows changed
+    if (newFlowIds !== oldFlowIds) {
+      console.log("New flows detected:", newFlows.length);
       setFlows(newFlows);
       setIsLoading(false);
       setError(null);
       hasLoadedRef.current = true;
+      return;
     }
-  }, []);
+    
+    // Check for process count changes
+    const hasProcessChanges = newFlows.some(newFlow => {
+      const oldFlow = flows.find(f => f.flowId === newFlow.flowId);
+      return !oldFlow || oldFlow.processes.length !== newFlow.processes.length;
+    });
+    
+    if (hasProcessChanges) {
+      console.log("Process changes detected", newFlows.length);
+      setFlows(newFlows);
+      setIsLoading(false);
+      setError(null);
+      return;
+    }
+    
+    // Check for process status changes
+    const hasStatusChanges = newFlows.some(newFlow => {
+      const oldFlow = flows.find(f => f.flowId === newFlow.flowId);
+      if (!oldFlow) return false;
+      
+      return newFlow.processes.some(newProcess => {
+        const oldProcess = oldFlow.processes.find(p => p.id === newProcess.id);
+        return oldProcess && oldProcess.status !== newProcess.status;
+      });
+    });
+    
+    if (hasStatusChanges) {
+      console.log("Process status changes detected", newFlows.length);
+      setFlows(newFlows);
+      setIsLoading(false);
+      setError(null);
+    }
+  }, [flows]);
 
   useEffect(() => {
     let active = true;

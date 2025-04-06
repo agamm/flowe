@@ -81,6 +81,10 @@ export function useFlow(id: string) {
             // Only update state if the flow actually changed
             setFlow(currentFlow => {
               if (hasFlowChanged(currentFlow, updatedFlow)) {
+                // Preserve flowName across updates if it exists in current flow but not in update
+                if (currentFlow?.flowName && !updatedFlow.flowName) {
+                  updatedFlow.flowName = currentFlow.flowName;
+                }
                 return updatedFlow;
               }
               return currentFlow;

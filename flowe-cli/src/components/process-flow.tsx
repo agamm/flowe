@@ -80,7 +80,7 @@ function createFlowElements(flow: Flow): {
 } {
   const { processes } = flow;
   if (!processes || processes.length === 0) {
-    console.warn("No processes found in flow:", flow.flowId);
+    // Return empty arrays instead of throwing an error
     return { nodes: [], edges: [] };
   }
 
@@ -265,7 +265,10 @@ function createFlowElements(flow: Flow): {
   // Create nodes
   const nodes = processes.map(process => {
     const position = nodePositions.get(process.id) || { x: 0, y: 0 };
-    const processName = (process.arguments as { name?: string })?.name || process.id.split('-')[0];
+    const nodeLevel = nodeLevels.get(process.id) || 0;
+    // Use flowName for display when available, fall back to other sources
+    const processName = (process.flowName && nodeLevel === 0) ? process.flowName : 
+                       (process.arguments as { name?: string })?.name || process.id.split('-')[0];
     
     // Node styling
     const nodeColor = nodePathColors.get(process.id) || "#d1d5db";
@@ -342,40 +345,38 @@ function createFlowElements(flow: Flow): {
 
 // Main component
 export function ProcessFlow({ flow, onNodeSelect }: ProcessFlowProps) {
-  const { nodes, edges } = useMemo(() => createFlowElements(flow), [flow]);
+  const { nodes, edges } = useMemo(() => {
+    if (!flow.processes || flow.processes.length === 0) {
+      return { nodes: [], edges: [] };
+    }
+    return createFlowElements(flow);
+  }, [flow]);
+  
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [layoutNodes, setLayoutNodes] = useState(nodes);
   const reactFlowInstance = useRef<ReactFlowModule.ReactFlowInstance | null>(null);
   const prevNodesLength = useRef(nodes.length);
   const prevProcessStateRef = useRef<string>("");
   
-  // Create a fingerprint of current processes state (count + statuses)
+  // Create a fingerprint of current processes state
   const processStateFingerprint = useMemo(() => {
+    if (!flow.processes || flow.processes.length === 0) return "";
     return flow.processes
       .map(p => `${p.id}:${p.status}:${p.completedAt || 0}`)
       .sort()
       .join("|");
   }, [flow.processes]);
 
-  // Update layout only when processes actually change
+  // Update layout when processes change
   useEffect(() => {
     if (processStateFingerprint !== prevProcessStateRef.current) {
       setLayoutNodes(nodes);
       prevProcessStateRef.current = processStateFingerprint;
       
-      // Fit view when processes change
       if (reactFlowInstance.current) {
-        const hasNewNodes = nodes.length > prevNodesLength.current;
-        
         setTimeout(() => {
-          reactFlowInstance.current?.fitView({
-            padding: 0.5,
-            includeHiddenNodes: true,
-            minZoom: 0.4,
-            maxZoom: 1.0,
-            duration: 200
-          });
-        }, hasNewNodes ? 500 : 200);
+          reactFlowInstance.current?.fitView({ padding: 0.5 });
+        }, 200);
         
         prevNodesLength.current = nodes.length;
       }
@@ -395,6 +396,15 @@ export function ProcessFlow({ flow, onNodeSelect }: ProcessFlowProps) {
     setSelectedNode(isDeselecting ? null : nodeId);
     onNodeSelect?.(isDeselecting ? null : flow.processes.find(p => p.id === nodeId) || null);
   }, [selectedNode, flow.processes, onNodeSelect]);
+
+  // Render a message if there are no processes
+  if (!flow.processes || flow.processes.length === 0) {
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <div className="text-center p-4">Loading flow data...</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ width: "100%", height: "100%" }} className="relative" data-testid="process-flow-container">

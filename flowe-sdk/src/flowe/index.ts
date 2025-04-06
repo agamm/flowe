@@ -19,6 +19,7 @@ export interface FlowEvent {
 	parentIds?: string[];
 	completed?: boolean;
 	flowId: string;
+	flowName?: string;
 	stackTrace?: StackFrame[];
 }
 
@@ -92,6 +93,7 @@ import { Queue, QueueItem } from './queue.js';
 export class Flowe {
 	private ingestEndpoint = "http://localhost:27182/api/flow";
 	private activeFlowId?: string;
+	private activeFlowName?: string;
 	private suppressErrors = true;
 	private logErrors = true;
 	private enabled = false;
@@ -189,12 +191,15 @@ export class Flowe {
 
 	/**
 	 * Rename the active flow or set the flow ID before starting
-	 * @param flowId The new flow ID to use
-	 * @returns The flow ID
+	 * @param flowName The new flow name to use for display
+	 * @returns The generated unique flow ID
 	 */
-	renameFlow(flowId: string): string {
-		this.activeFlowId = flowId;
-		return flowId;
+	renameFlow(flowName: string): string {
+		// Generate a unique flow ID with timestamp to ensure uniqueness between runs
+		const uniqueFlowId = `flow-${Date.now().toString(36)}`;
+		this.activeFlowId = uniqueFlowId;
+		this.activeFlowName = flowName;
+		return uniqueFlowId;
 	}
 
 	/**
@@ -272,13 +277,13 @@ export class Flowe {
 				throw new Error(`Process with id ${id} already exists`);
 			}
 
-			// Use active flowId or create a default "flow" if none exists
-			const processFlowId = this.activeFlowId || "flow";
-			
-			// Set as active if no active flow yet
+			// Create a new flow with unique ID if this is first process
 			if (!this.activeFlowId) {
-				this.renameFlow(processFlowId);
+				this.renameFlow("Default Flow");
 			}
+			
+			// By this point, activeFlowId should always be defined
+			const flowId = this.activeFlowId!;
 
 			const parentIds = parents 
 				? (Array.isArray(parents) ? parents : [parents]) 
@@ -292,7 +297,8 @@ export class Flowe {
 				createdAt: Date.now(),
 				args,
 				parentIds,
-				flowId: processFlowId,
+				flowId: flowId,
+				flowName: this.activeFlowName,
 				completed: false,
 				stackTrace
 			};
@@ -307,7 +313,8 @@ export class Flowe {
 					output: { status: "pending" } as Record<string, unknown>,
 					timestamp: Date.now(),
 					status: "pending",
-					flowId: processFlowId,
+					flowId: flowId,
+					flowName: this.activeFlowName,
 					parentIds,
 					stackTrace
 				}
@@ -379,6 +386,7 @@ export class Flowe {
 					timestamp: completedAt,
 					status: "completed",
 					flowId: completedFlow.flowId,
+					flowName: completedFlow.flowName || this.activeFlowName,
 					parentIds: completedFlow.parentIds,
 					stackTrace: flow.stackTrace
 				}

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { kv } from "@/lib/keyv";
-import type { Process, Flow } from "@/types/types";
+import type { Flow } from "@/types/types";
 import { fetchFlowById, sortFlowsByTimestamp, createSSEHeaders } from "../../utils";
 
 const SSE_POLL_INTERVAL = 1000;
@@ -19,21 +19,23 @@ async function streamFlows(
       const seenFlowIds = new Set<string>();
       const flows: Flow[] = [];
       
-      // The iterator from Map.entries() is not an async iterator
+      // Extract unique flow IDs from composite keys (flowId:processId)
       const entries = kv.iterator();
-      for (const [, process] of entries) {
-        const proc = process as Process;
+      for (const [key] of entries) {
+        // Extract flowId from composite key (flowId:processId)
+        const colonIndex = key.indexOf(':');
+        if (colonIndex === -1) continue; // Skip legacy keys
         
-        if (!proc?.flowId) continue;
-        if (seenFlowIds.has(proc.flowId)) continue;
+        const flowId = key.substring(0, colonIndex);
+        if (!flowId || seenFlowIds.has(flowId)) continue;
         
-        seenFlowIds.add(proc.flowId);
+        seenFlowIds.add(flowId);
         
         try {
-          const flow = await fetchFlowById(proc.flowId);
+          const flow = await fetchFlowById(flowId);
           flows.push(flow);
         } catch (err) {
-          console.warn(`Failed to fetch flow ${proc.flowId}:`, err);
+          console.warn(`Failed to fetch flow ${flowId}:`, err);
         }
       }
 

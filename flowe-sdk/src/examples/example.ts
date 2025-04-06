@@ -45,7 +45,7 @@ async function aiAgentWithTools() {
   await exampleLog("Geocoding started", { location: cityResult.city });
   
   // Simulate longer processing time for geocoding
-  await wait(3000);
+  await wait(1000);
   
   const geoResult = { latitude: 48.8566, longitude: 2.3522 };
   f.end(geoToolId, geoResult);
@@ -62,7 +62,7 @@ async function aiAgentWithTools() {
   });
   
   // Simulate API delay for weather data
-  await wait(2000);
+  await wait(1000);
   
   const weatherResult = { temperature: 22, unit: "Celsius" };
   f.end(weatherToolId, weatherResult);
@@ -76,7 +76,7 @@ async function aiAgentWithTools() {
   }, [cityExtractorId ?? '', weatherToolId ?? '']);
   
   // Longer delay for the AI to simulate real world wait
-  await wait(4000);
+  await wait(2000);
   
   const activityResult = { 
     recommendation: "Visit the Eiffel Tower and enjoy a picnic in Champ de Mars" 

@@ -105,12 +105,12 @@ export async function getAllRecords() {
 // Function to get all processes for a flow from KV
 export async function getAllProcessesForFlow(flowId: string): Promise<Process[]> {
   const processes: Process[] = [];
-  const seenIds = new Set<string>();
   try {
-    for (const [, value] of memoryStore.entries()) {
-      if (value?.flowId === flowId && !seenIds.has(value.id)) {
+    // Look for keys with the flowId: prefix
+    const prefix = `${flowId}:`;
+    for (const [key, value] of memoryStore.entries()) {
+      if (key.startsWith(prefix)) {
         processes.push(value);
-        seenIds.add(value.id);
       }
     }
   } catch (err) {
@@ -121,15 +121,21 @@ export async function getAllProcessesForFlow(flowId: string): Promise<Process[]>
 
 // Export a simple interface for the KV store with persistence
 export const kv = {
-  get: async (key: string) => {
-    return memoryStore.get(key);
+  get: async (key: string, flowId?: string) => {
+    if (!flowId) {
+      throw new Error("flowId is required for looking up processes");
+    }
+    return memoryStore.get(`${flowId}:${key}`);
   },
   set: async (key: string, value: Process) => {
-    memoryStore.set(key, value);
+    // Super simple: Use the flowId as part of the key to prevent overwriting
+    // processes from different flows that have the same ID
+    const storeKey = value.flowId ? `${value.flowId}:${key}` : key;
+    memoryStore.set(storeKey, value);
     await saveStore();
   },
-  delete: async (key: string) => {
-    const result = memoryStore.delete(key);
+  delete: async (key: string, flowId: string) => {
+    const result = memoryStore.delete(`${flowId}:${key}`);
     await saveStore();
     return result;
   },
@@ -137,8 +143,8 @@ export const kv = {
     memoryStore.clear();
     await saveStore();
   },
-  has: async (key: string) => {
-    return memoryStore.has(key);
+  has: async (key: string, flowId: string) => {
+    return memoryStore.has(`${flowId}:${key}`);
   },
   iterator: () => memoryStore.entries(),
   on: () => {}, 

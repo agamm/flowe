@@ -15,8 +15,14 @@ export function createJsonResponse(data: unknown, status = 200) {
 export async function fetchFlowById(flowId: string): Promise<Flow> {
   const processes = await getAllProcessesForFlow(flowId);
   
+  // Extract flow name from the first process that has one
+  const flowName = processes.find(p => p.flowName)?.flowName || 
+                   processes[0]?.arguments?.name as string || 
+                   flowId.split('-')[0];
+  
   return {
     flowId,
+    flowName,
     processes: processes.sort((a, b) => a.timestamp - b.timestamp)
   };
 }

@@ -16,6 +16,7 @@ export interface Process {
 	completedAt?: number;
 	status: "completed" | "failed" | "pending";
 	flowId: string; // ID of the flow this process belongs to
+	flowName?: string; // Display name of the flow
 	parentIds?: string[]; // IDs of parent processes
 	stackTrace?: StackFrame[]; // Stack trace at process creation time
 }
@@ -23,6 +24,7 @@ export interface Process {
 // A Flow represents a directed graph of processes
 export interface Flow {
 	flowId: string;
+	flowName?: string;
 	processes: Process[];
 }
 

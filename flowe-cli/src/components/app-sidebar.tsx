@@ -32,17 +32,20 @@ function FlowItem({ flow, isActive }: FlowItemProps) {
 	const rootProcess = flow.processes[0];
 	const timeAgo = useTimeAgo(rootProcess.timestamp);
 	const processCount = flow.processes.length;
-	const status = flow.processes.some(p => p.status === "pending") ? "pending" : "completed";
+	// Check if any process is pending - if none are pending, the flow is completed
+	const isAnyPending = flow.processes.some(p => p.status === "pending");
+	const status = isAnyPending ? "pending" : "completed";
 	
 	const url = `/flows/${flow.flowId}`;
 	
-	// Get a display name from the process arguments or use the flow ID
-	const displayName = typeof rootProcess.arguments === 'object' && 
+	// Get display name: prefer flow's name, then process arguments.name, then flow ID prefix
+	const displayName = flow.flowName || 
+		(typeof rootProcess.arguments === 'object' && 
 		rootProcess.arguments && 
 		'name' in rootProcess.arguments && 
 		typeof rootProcess.arguments.name === 'string' 
 			? rootProcess.arguments.name 
-			: `Flow ${flow.flowId.split('-')[0]}`;
+			: `Flow ${flow.flowId.split('-')[0]}`);
 	
 	return (
 		<SidebarMenuItem>
@@ -88,16 +91,35 @@ export function AppSidebar() {
 			return bTime - aTime; // Newest first
 		})[0];
 		
-		// We should navigate when:
-		// 1. We're on the home page (/) 
-		// 2. We're not on any flow page
-		const isHomePage = pathname === '/';
-		const isNotOnAnyFlowPage = !pathname.startsWith('/flows/');
+		// Get current flow ID from URL
+		const currentFlowId = pathname.startsWith('/flows/') 
+			? pathname.split('/')[2]
+			: null;
 		
+		// Find out if we should navigate to the newest flow
+		let shouldNavigate = false;
 		
-		// console.log("FLowing....", isHomePage, isNotOnAnyFlowPage);
-		if (isHomePage || isNotOnAnyFlowPage) {
-			// Use replace to avoid history issues
+		// Case 1: Not on a flow page (home page or elsewhere)
+		if (!currentFlowId) {
+			shouldNavigate = true;
+		} 
+		// Case 2: Current flow doesn't exist anymore
+		else if (!flows.some(f => f.flowId === currentFlowId)) {
+			shouldNavigate = true;
+		}
+		// Case 3: A new flow arrived that's significantly newer than current
+		else if (currentFlowId !== newestFlow.flowId) {
+			const currentFlow = flows.find(f => f.flowId === currentFlowId);
+			// Check if newest flow is at least 2 seconds newer than current flow
+			const currentTime = currentFlow?.processes[0]?.timestamp || 0;
+			const newestTime = newestFlow.processes[0]?.timestamp || 0;
+			if (newestTime - currentTime > 2000) {
+				shouldNavigate = true;
+			}
+		}
+
+		// Navigate if needed
+		if (shouldNavigate) {
 			router.replace(`/flows/${newestFlow.flowId}`);
 		}
 	}, [flows, pathname, router, autoSelectNewFlows, isLoading]);

@@ -12,6 +12,7 @@ type IngestRequest = {
   createdAt?: number;
   status: "completed" | "failed" | "pending";
   flowId: string;
+  flowName?: string;
   parentIds?: string[];
   completedAt?: number;
   stackTrace?: StackFrame[];
@@ -27,7 +28,8 @@ export async function POST(request: NextRequest) {
     }
     
     const now = Date.now();
-    const existingProcess = await kv.get(body.id) as Process | null;
+    // Look up existing process using both the process ID and flow ID
+    const existingProcess = await kv.get(body.id, body.flowId) as Process | null;
     
     // Merge the incoming payload with existing process data if it exists
     const processData: Process = {
@@ -35,6 +37,7 @@ export async function POST(request: NextRequest) {
       ...body,
       id: body.id,
       flowId: body.flowId,
+      flowName: body.flowName || existingProcess?.flowName || "Unnamed Flow",
       arguments: body.arguments || existingProcess?.arguments || {},
       output: body.output || existingProcess?.output || {},
       timestamp: body.timestamp || now,
@@ -45,15 +48,18 @@ export async function POST(request: NextRequest) {
       stackTrace: body.stackTrace || existingProcess?.stackTrace
     };
 
+    // Store the process using the composite key
     await kv.set(body.id, processData);
     
-    const storedProcess = await kv.get(body.id) as Process | null;
+    // Verify the process was stored
+    const storedProcess = await kv.get(body.id, body.flowId) as Process | null;
     
     if (!storedProcess) {
-      console.error(`Failed to verify storage of process ${body.id}`);
+      console.error(`Failed to verify storage of process ${body.id} in flow ${body.flowId}`);
       return createJsonResponse({
         error: "Failed to verify process storage",
-        processId: body.id
+        processId: body.id,
+        flowId: body.flowId
       }, 500);
     }
     
