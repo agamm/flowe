@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { kv } from "@/lib/keyv";
-import type { Process } from "@/types/types";
+import type { Process, StackFrame } from "@/types/types";
 import { createJsonResponse } from "../utils";
 
 // IngestRequest extends Process but makes some fields optional
@@ -14,6 +14,7 @@ type IngestRequest = {
   flowId: string;
   parentIds?: string[];
   completedAt?: number;
+  stackTrace?: StackFrame[];
 };
 
 // POST handler for storing new processes
@@ -40,7 +41,8 @@ export async function POST(request: NextRequest) {
       createdAt: existingProcess?.createdAt || body.createdAt || now,
       status: body.status,
       parentIds: body.parentIds || existingProcess?.parentIds || [],
-      completedAt: body.status === "completed" ? (body.completedAt || now) : existingProcess?.completedAt
+      completedAt: body.status === "completed" ? (body.completedAt || now) : existingProcess?.completedAt,
+      stackTrace: body.stackTrace || existingProcess?.stackTrace
     };
 
     await kv.set(body.id, processData);

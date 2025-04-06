@@ -1,12 +1,12 @@
 "use client";
 
+import { use, useState, useEffect } from "react";
+import { useFlow } from "@/hooks/use-flow";
 import { ProcessFlow } from "@/components/process-flow";
 import { JsonView } from "@/components/json-view";
-import { useFlow } from "@/hooks/use-flow";
-import { notFound } from "next/navigation";
-import { useState, use, useEffect } from "react";
-import type { Process } from "@/types/types";
+import { Process } from "@/types/types";
 import { Clock, RefreshCw } from "lucide-react";
+import { notFound } from "next/navigation";
 
 export default function FlowPage({
   params,
@@ -110,7 +110,7 @@ export default function FlowPage({
       </div>
 
       {selectedProcess && (
-        <div className="mt-6">
+        <div className="space-y-4">
           <div className="flex items-center mb-4">
             <h2 className="text-xl font-semibold mr-2">Process Details</h2>
             <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs">
@@ -177,7 +177,8 @@ export default function FlowPage({
                   : "Completed (timestamp missing)",
                 createdAt: new Date(selectedProcess.createdAt || selectedProcess.timestamp).toLocaleString(),
                 timestamp: new Date(selectedProcess.timestamp).toLocaleString(),
-                status: selectedProcess.status
+                status: selectedProcess.status,
+                stackTrace: selectedProcess.stackTrace || []
               }} 
               title="Metadata"
             />

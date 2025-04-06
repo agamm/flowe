@@ -8,6 +8,14 @@ const wait = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
+// Helper function that uses Flowe to track logging operations
+async function exampleLog(message: string, data: any): Promise<void> {
+  const logId = f.start("logging", { message, data });
+  console.log(`[LOG] ${message}:`, data);
+  await wait(500); // Simulate some processing time
+  f.end(logId, { success: true, timestamp: new Date().toISOString() });
+}
+
 async function aiAgentWithTools() {
   // By default the sdk doesn't send info (for production)
   f.setEnabled(true);
@@ -33,6 +41,9 @@ async function aiAgentWithTools() {
   // Run geocoding tool as a separate branch from city extractor
   const geoToolId = f.start("geocodingTool", { location: cityResult.city }, agentId);
   
+  // Call logging function for geocoding
+  await exampleLog("Geocoding started", { location: cityResult.city });
+  
   // Simulate longer processing time for geocoding
   await wait(3000);
   
@@ -44,6 +55,11 @@ async function aiAgentWithTools() {
   const weatherToolId = f.start("weatherTool", { 
     coordinates: { lat: geoResult.latitude, lng: geoResult.longitude } 
   }, geoToolId);
+  
+  // Call logging function for weather
+  await exampleLog("Weather check started", { 
+    coordinates: { lat: geoResult.latitude, lng: geoResult.longitude } 
+  });
   
   // Simulate API delay for weather data
   await wait(2000);

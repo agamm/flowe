@@ -1,3 +1,12 @@
+/**
+ * Represents a stack trace frame from the SDK
+ */
+export interface StackFrame {
+	file: string;
+	func: string;
+	line: number;
+}
+
 export interface Process {
 	id: string;
 	arguments?: Record<string, unknown>;
@@ -8,6 +17,7 @@ export interface Process {
 	status: "completed" | "failed" | "pending";
 	flowId: string; // ID of the flow this process belongs to
 	parentIds?: string[]; // IDs of parent processes
+	stackTrace?: StackFrame[]; // Stack trace at process creation time
 }
 
 // A Flow represents a directed graph of processes

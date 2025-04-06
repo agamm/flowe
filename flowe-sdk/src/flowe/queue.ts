@@ -42,6 +42,11 @@ export class Queue {
       return;
     }
     
+    // Ensure stackTrace is included in the payload
+    if (item.payload && !item.payload.stackTrace) {
+      console.warn(`No stack trace found for item ${item.id}`);
+    }
+    
     this.queue.push(item);
     this.processQueue();
   }

@@ -1,4 +1,13 @@
 /**
+ * Represents a stack trace frame
+ */
+export interface StackFrame {
+	file: string;
+	func: string;
+	line: string | number;
+}
+
+/**
  * Represents a process within a flow
  */
 export interface FlowEvent {
@@ -10,6 +19,7 @@ export interface FlowEvent {
 	parentIds?: string[];
 	completed?: boolean;
 	flowId: string;
+	stackTrace?: StackFrame[];
 }
 
 /**
@@ -212,6 +222,39 @@ export class Flowe {
 	}
 
 	/**
+	 * Gets the full stack trace as an array of structured trace objects
+	 * Based on NodeJS best practices for capturing stack traces
+	 */
+	public getStackTrace(): StackFrame[] {
+		const error = new Error();
+		if (!error.stack) return [];
+		
+		const lines = error.stack.split('\n').slice(1); // Skip the first line which is just "Error"
+		
+		return lines
+			.map(line => {
+				// Parse stack trace lines like: "at function (file:line:column)"
+				const match = line.trim().match(/at\s+(?:(.+?)\s+\((.+?):(\d+)(?::\d+)?\)|(.+?):(\d+)(?::\d+)?)/);
+				if (!match) return null;
+				
+				// Either format: "at function (file:line:column)" or "at file:line:column"
+				const func = match[1] || '(anonymous)';
+				const file = match[2] || match[4] || '';
+				const lineNum = match[3] || match[5] || '0';
+				
+				return { file, func, line: lineNum } as StackFrame;
+			})
+			.filter((item): item is StackFrame => 
+				item !== null && 
+				!item.file.includes('node:internal') && 
+				!item.file.includes('node_modules') &&
+				!item.func.includes('getStackTrace') // Filter out our own getStackTrace calls
+			)
+			.slice(0, 5) // Limit to first 5 frames to avoid overwhelming data
+			.reverse(); // Reverse the order to show the innermost function call first
+	}
+
+	/**
 	 * Start a new process in the flow
 	 * @param id Process type identifier
 	 * @param args Process arguments
@@ -241,13 +284,17 @@ export class Flowe {
 				? (Array.isArray(parents) ? parents : [parents]) 
 				: [];
 
+			// Capture stack trace
+			const stackTrace = this.getStackTrace();
+
 			const newProcess = {
 				id,
 				createdAt: Date.now(),
 				args,
 				parentIds,
 				flowId: processFlowId,
-				completed: false
+				completed: false,
+				stackTrace
 			};
 			
 			globalFlows.set(id, newProcess);
@@ -261,7 +308,8 @@ export class Flowe {
 					timestamp: Date.now(),
 					status: "pending",
 					flowId: processFlowId,
-					parentIds
+					parentIds,
+					stackTrace
 				}
 			);
 			
@@ -331,7 +379,8 @@ export class Flowe {
 					timestamp: completedAt,
 					status: "completed",
 					flowId: completedFlow.flowId,
-					parentIds: completedFlow.parentIds
+					parentIds: completedFlow.parentIds,
+					stackTrace: flow.stackTrace
 				}
 			);
 

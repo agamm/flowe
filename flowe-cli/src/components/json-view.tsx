@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Clock } from "lucide-react";
 import React, { useState } from "react";
+import { StackFrame } from "@/types/types";
 
 interface JsonViewProps {
 	data: unknown;
@@ -42,6 +43,36 @@ function formatValue(value: unknown): React.ReactNode {
 		default:
 			return <span>{JSON.stringify(value)}</span>;
 	}
+}
+
+function StackTraceView({ frames }: { frames: StackFrame[] | undefined }) {
+	if (!frames || frames.length === 0) {
+		return <span className="text-gray-500 text-xs">No stack trace available</span>;
+	}
+	
+	return (
+		<div className="flex flex-col w-full">
+			<div className="flex flex-wrap items-center gap-1 text-xs">
+				{frames.map((frame, i) => (
+					<React.Fragment key={i}>
+						{i > 0 && (
+							<span className="text-gray-400">
+								&gt;
+							</span>
+						)}
+						<span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 border border-blue-100">
+							<span className="font-medium text-blue-700">{frame.func}</span>
+							<span className="mx-1 text-gray-400">(</span>
+							<span className="font-mono text-gray-700">{frame.file.split('/').pop()}</span>
+							<span className="text-gray-400">:</span>
+							<span className="text-gray-600">{frame.line}</span>
+							<span className="text-gray-400">)</span> 1
+						</span>
+					</React.Fragment>
+				))}
+			</div>
+		</div>
+	);
 }
 
 function JsonContent({ data }: { data: unknown }) {
@@ -106,6 +137,8 @@ function JsonContent({ data }: { data: unknown }) {
 								<span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full text-xs">
 									{value}
 								</span>
+							) : key === "stackTrace" && Array.isArray(value) ? (
+								<StackTraceView frames={value as StackFrame[]} />
 							) : (
 								<JsonContent data={value} />
 							)}

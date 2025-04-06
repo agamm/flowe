@@ -106,4 +106,30 @@ describe('Flowe SDK', () => {
     );
   });
 
+  it('getStackTrace should return structured stack frames', () => {
+    const flowe = new Flowe({
+      enabled: true,
+      ingestEndpoint: 'http://test.endpoint'
+    });
+    
+    const stackTrace = (flowe as any).getStackTrace();
+    
+    expect(Array.isArray(stackTrace)).toBe(true);
+    
+    if (stackTrace.length > 0) {
+      const frame = stackTrace[0];
+      expect(frame).toHaveProperty('file');
+      expect(frame).toHaveProperty('func');
+      expect(frame).toHaveProperty('line');
+      
+      expect(typeof frame.file).toBe('string');
+      expect(typeof frame.func).toBe('string');
+      expect(typeof frame.line).toBe('string');
+      
+      const containsSelf = stackTrace.some(frame => 
+        frame.func.includes('getStackTrace')
+      );
+      expect(containsSelf).toBe(false);
+    }
+  });
 }); 
