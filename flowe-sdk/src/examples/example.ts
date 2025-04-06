@@ -16,6 +16,41 @@ async function exampleLog(message: string, data: any): Promise<void> {
   f.end(logId, { success: true, timestamp: new Date().toISOString() });
 }
 
+// Function to handle geocoding operations
+async function runGeocoding(city: string, parentId: string | undefined): Promise<{ latitude: number, longitude: number, toolId: string }> {
+  // Run geocoding tool as a separate branch from city extractor
+  const geoToolId = f.start("geocodingTool", { location: city }, parentId);
+  
+  // Call logging function for geocoding
+  await exampleLog("Geocoding started", { location: city });
+  
+  // Simulate longer processing time for geocoding
+  await wait(1000);
+  
+  const geoResult = { latitude: 48.8566, longitude: 2.3522 };
+  f.end(geoToolId, geoResult);
+  console.log("Geocoding tool finished");
+  
+  return { ...geoResult, toolId: "geocodingTool" };
+}
+
+// Function to handle weather operations
+async function runWeatherTool(coordinates: { lat: number, lng: number }, parentId: string | undefined): Promise<{ temperature: number, unit: string, toolId: string }> {
+  const weatherToolId = f.start("weatherTool", { coordinates }, parentId);
+  
+  // Call logging function for weather
+  await exampleLog("Weather check started", { coordinates });
+  
+  // Simulate API delay for weather data
+  await wait(1000);
+  
+  const weatherResult = { temperature: 22, unit: "Celsius" };
+  f.end(weatherToolId, weatherResult);
+  console.log("Weather tool finished");
+  
+  return { ...weatherResult, toolId: "weatherTool" };
+}
+
 async function aiAgentWithTools() {
   // By default the sdk doesn't send info (for production)
   f.setEnabled(true);
@@ -38,41 +73,20 @@ async function aiAgentWithTools() {
   f.end(cityExtractorId, cityResult);
   console.log("City extractor finished");
   
-  // Run geocoding tool as a separate branch from city extractor
-  const geoToolId = f.start("geocodingTool", { location: cityResult.city }, agentId);
+  // Run geocoding in a separate function
+  const { latitude, longitude, toolId: geoToolId } = await runGeocoding(cityResult.city, agentId);
   
-  // Call logging function for geocoding
-  await exampleLog("Geocoding started", { location: cityResult.city });
-  
-  // Simulate longer processing time for geocoding
-  await wait(1000);
-  
-  const geoResult = { latitude: 48.8566, longitude: 2.3522 };
-  f.end(geoToolId, geoResult);
-  console.log("Geocoding tool finished");
-
-  // Run weather tool using the coordinates
-  const weatherToolId = f.start("weatherTool", { 
-    coordinates: { lat: geoResult.latitude, lng: geoResult.longitude } 
-  }, geoToolId);
-  
-  // Call logging function for weather
-  await exampleLog("Weather check started", { 
-    coordinates: { lat: geoResult.latitude, lng: geoResult.longitude } 
-  });
-  
-  // Simulate API delay for weather data
-  await wait(1000);
-  
-  const weatherResult = { temperature: 22, unit: "Celsius" };
-  f.end(weatherToolId, weatherResult);
-  console.log("Weather tool finished");
+  // Run weather tool in a separate function
+  const { temperature, unit, toolId: weatherToolId } = await runWeatherTool(
+    { lat: latitude, lng: longitude },
+    geoToolId
+  );
 
   // Activity recommender with MULTIPLE PARENTS (cityExtractor and weatherTool)
   // This demonstrates multi-parent structure - it depends on both city name and weather
   const activityRecommenderId = f.start("activityRecommender", { 
     city: cityResult.city, 
-    temperature: weatherResult.temperature 
+    temperature 
   }, [cityExtractorId ?? '', weatherToolId ?? '']);
   
   // Longer delay for the AI to simulate real world wait
@@ -88,8 +102,8 @@ async function aiAgentWithTools() {
   
   return f.end(agentId, {
     city: cityResult.city,
-    temperature: weatherResult.temperature,
-    unit: weatherResult.unit,
+    temperature,
+    unit,
     activity: activityResult.recommendation
   });
 }

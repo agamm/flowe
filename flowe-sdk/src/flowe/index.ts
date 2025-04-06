@@ -260,6 +260,54 @@ export class Flowe {
 	}
 
 	/**
+	 * Finds a potential parent process based on stack trace similarity
+	 * @param stackTrace The stack trace to match against
+	 * @returns The ID of a matching process, or undefined if none found
+	 */
+	private findParentByStackTrace(stackTrace: StackFrame[]): string | undefined {
+		if (!stackTrace.length) return undefined;
+		
+		// Convert map to array for filtering
+		const processes = Array.from(globalFlows.values());
+		
+		// Consider all processes in the current flow
+		const flowProcesses = processes.filter(process => 
+			process.flowId === this.activeFlowId
+		);
+		
+		if (flowProcesses.length === 0) return undefined;
+		
+		// Find the caller functions (exclude our own internal functions)
+		const callerFuncs = stackTrace
+			.filter(frame => 
+				!frame.func.includes('start') && 
+				!frame.func.includes('Flowe')
+			)
+			.map(frame => frame.func);
+		
+		// Find processes that share functions with our stack trace
+		const matchingProcesses = flowProcesses.filter(process => {
+			if (!process.stackTrace?.length) return false;
+			
+			const processFuncs = process.stackTrace.map(frame => frame.func);
+			
+			// Match if any caller function exists in the process stack
+			// But exclude self-matches
+			return callerFuncs.some(func => 
+				processFuncs.includes(func) && process.id !== func
+			);
+		});
+		
+		if (matchingProcesses.length === 0) return undefined;
+		
+		// Sort by creation time, most recent first
+		matchingProcesses.sort((a, b) => b.createdAt - a.createdAt);
+		
+		// Return the best match
+		return matchingProcesses[0].id;
+	}
+
+	/**
 	 * Start a new process in the flow
 	 * @param id Process type identifier
 	 * @param args Process arguments
@@ -273,10 +321,15 @@ export class Flowe {
 		}
 
 		try {
-			if (globalFlows.has(id)) {
-				throw new Error(`Process with id ${id} already exists`);
+			// Make id unique if it already exists by adding a sequential counter
+			let uniqueId = id;
+			let counter = 1;
+			
+			while (globalFlows.has(uniqueId)) {
+				uniqueId = `${id}-${counter}`;
+				counter++;
 			}
-
+			
 			// Create a new flow with unique ID if this is first process
 			if (!this.activeFlowId) {
 				this.renameFlow("Default Flow");
@@ -285,15 +338,25 @@ export class Flowe {
 			// By this point, activeFlowId should always be defined
 			const flowId = this.activeFlowId!;
 
-			const parentIds = parents 
-				? (Array.isArray(parents) ? parents : [parents]) 
-				: [];
-
 			// Capture stack trace
 			const stackTrace = this.getStackTrace();
 
+			// Determine parent IDs
+			let parentIds: string[] = [];
+			
+			if (parents) {
+				// Use explicitly provided parents
+				parentIds = Array.isArray(parents) ? parents : [parents];
+			} else {
+				// Try to find a parent by stack trace if none is provided
+				const potentialParent = this.findParentByStackTrace(stackTrace);
+				if (potentialParent) {
+					parentIds = [potentialParent];
+				}
+			}
+
 			const newProcess = {
-				id,
+				id: uniqueId,
 				createdAt: Date.now(),
 				args,
 				parentIds,
@@ -303,12 +366,12 @@ export class Flowe {
 				stackTrace
 			};
 			
-			globalFlows.set(id, newProcess);
+			globalFlows.set(uniqueId, newProcess);
 			
 			this.sendToQueue(
-				id,
+				uniqueId,
 				{
-					id,
+					id: uniqueId,
 					arguments: args as Record<string, unknown>,
 					output: { status: "pending" } as Record<string, unknown>,
 					timestamp: Date.now(),
@@ -320,8 +383,8 @@ export class Flowe {
 				}
 			);
 			
-			this.successfullySentProcesses.add(id);
-			return id;
+			this.successfullySentProcesses.add(uniqueId);
+			return uniqueId;
 		} catch (error) {
 			return this.handleError(error, "Failed to start process");
 		}
