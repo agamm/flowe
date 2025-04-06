@@ -10,10 +10,10 @@ const wait = (ms: number): Promise<void> => {
 
 // Helper function that uses Flowe to track logging operations
 async function exampleLog(message: string, data: any): Promise<void> {
-  const logId = f.start("logging", { message, data });
+  f.start("logging", { message, data });
   console.log(`[LOG] ${message}:`, data);
   await wait(500); // Simulate some processing time
-  f.end(logId, { success: true, timestamp: new Date().toISOString() });
+  f.end("logging", { success: true, timestamp: new Date().toISOString() });
 }
 
 async function dummyParent() {
