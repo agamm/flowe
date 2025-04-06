@@ -256,7 +256,6 @@ export class Flowe {
 				!item.file.includes('node_modules') &&
 				!item.func.includes('getStackTrace') // Filter out our own getStackTrace calls
 			)
-			.slice(0, 5) // Limit to first 5 frames to avoid overwhelming data
 			.reverse(); // Reverse the order to show the innermost function call first
 	}
 
@@ -286,26 +285,51 @@ export class Flowe {
 			)
 			.map(frame => frame.func);
 		
+		if (callerFuncs.length === 0) return undefined;
+		
+		// Create a map of process IDs to their matching score
+		const processMatches: Map<string, number> = new Map();
+		
 		// Find processes that share functions with our stack trace
-		const matchingProcesses = flowProcesses.filter(process => {
-			if (!process.stackTrace?.length) return false;
+		for (const process of flowProcesses) {
+			if (!process.stackTrace?.length) continue;
 			
 			const processFuncs = process.stackTrace.map(frame => frame.func);
+			let matchCount = 0;
 			
-			// Match if any caller function exists in the process stack
-			// But exclude self-matches
-			return callerFuncs.some(func => 
-				processFuncs.includes(func) && process.id !== func
-			);
-		});
+			// Count matches between caller functions and process functions
+			for (const func of callerFuncs) {
+				if (processFuncs.includes(func) && process.id !== func) {
+					matchCount++;
+				}
+			}
+			
+			if (matchCount > 0) {
+				processMatches.set(process.id, matchCount);
+			}
+		}
 		
-		if (matchingProcesses.length === 0) return undefined;
+		if (processMatches.size === 0) return undefined;
 		
-		// Sort by creation time, most recent first
-		matchingProcesses.sort((a, b) => b.createdAt - a.createdAt);
+		// Find process with highest match count
+		let bestMatchId: string | undefined;
+		let bestMatchScore = 0;
+		let bestMatchTime = 0;
 		
-		// Return the best match
-		return matchingProcesses[0].id;
+		for (const [processId, score] of processMatches.entries()) {
+			const process = globalFlows.get(processId);
+			if (!process) continue;
+			
+			// Prioritize by match score, then by recency
+			if (score > bestMatchScore || 
+				(score === bestMatchScore && process.createdAt > bestMatchTime)) {
+				bestMatchId = processId;
+				bestMatchScore = score;
+				bestMatchTime = process.createdAt;
+			}
+		}
+		
+		return bestMatchId;
 	}
 
 	/**

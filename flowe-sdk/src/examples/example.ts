@@ -44,7 +44,7 @@ async function runWeatherTool(coordinates: { lat: number, lng: number }, parentI
   // Simulate API delay for weather data
   await wait(1000);
   
-  const weatherResult = { temperature: 22, unit: "Celsius" };
+  const weatherResult = { temperature: 22, unit: "Celsius", xml: "<xml><data>123</data></xml>" };
   f.end(weatherToolId, weatherResult);
   console.log("Weather tool finished");
   

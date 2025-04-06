@@ -25,12 +25,60 @@ function formatDuration(start: string, end?: string): string {
 	return `${(duration / 60000).toFixed(2)}m`;
 }
 
+function isXml(str: string): boolean {
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(str, 'text/xml');
+		// If parsing succeeded and there's no parsererror element, it's valid XML
+		return !doc.querySelector('parsererror');
+	} catch {
+		return false;
+	}
+}
+
+function prettifyXml(sourceXml: string): string {
+	try {
+		const xmlDoc = new DOMParser().parseFromString(sourceXml, 'application/xml');
+		const xsltDoc = new DOMParser().parseFromString([
+			// describes how we want to modify the XML - indent everything
+			'<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform">',
+			'  <xsl:strip-space elements="*"/>',
+			'  <xsl:template match="para[content-style][not(text())]">',
+			'    <xsl:value-of select="normalize-space(.)"/>',
+			'  </xsl:template>',
+			'  <xsl:template match="node()|@*">',
+			'    <xsl:copy><xsl:apply-templates select="node()|@*"/></xsl:copy>',
+			'  </xsl:template>',
+			'  <xsl:output indent="yes"/>',
+			'</xsl:stylesheet>',
+		].join('\n'), 'application/xml');
+
+		const xsltProcessor = new XSLTProcessor();    
+		xsltProcessor.importStylesheet(xsltDoc);
+		const resultDoc = xsltProcessor.transformToDocument(xmlDoc);
+		const resultXml = new XMLSerializer().serializeToString(resultDoc);
+		return resultXml;
+	} catch {
+		// If formatting fails, return the original XML
+		return sourceXml;
+	}
+}
+
 function formatValue(value: unknown): React.ReactNode {
 	if (value === null) return <span className="text-gray-500">null</span>;
 	if (value === undefined) return <span className="text-gray-500">undefined</span>;
 	
 	switch (typeof value) {
 		case "string":
+			// Handle XML strings
+			if (isXml(value)) {
+				const formattedXml = prettifyXml(value);
+				return (
+					<pre className="text-green-600 whitespace-pre-wrap overflow-x-auto">
+						{formattedXml}
+					</pre>
+				);
+			}
 			// Handle ISO date strings specially
 			if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
 				return <span className="text-green-600">&quot;{new Date(value).toLocaleString()}&quot;</span>;
