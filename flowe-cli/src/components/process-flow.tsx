@@ -3,7 +3,7 @@
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import type { Flow, Process } from "@/types/types";
 import * as ReactFlowModule from "@xyflow/react";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, Link2 } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 
 // Types and Constants
@@ -236,6 +236,8 @@ function createFlowElements(flow: Flow): {
     process.parentIds?.map(parentId => {
       const parentProcess = processMap.get(parentId);
       const isPending = process.status === "pending" || parentProcess?.status === "pending";
+      const isAutoParent = process.autoParent === true;
+      
       // Get color from parent node
       const edgeColor = isPending 
         ? STATUS_COLORS.pending.edge
@@ -248,7 +250,9 @@ function createFlowElements(flow: Flow): {
         animated: isPending,
         style: { 
           stroke: edgeColor, 
-          strokeWidth: isPending ? 3 : 2
+          strokeWidth: isPending ? 3 : 2,
+          // Use dashed line for auto-assigned parents
+          strokeDasharray: isAutoParent ? '5, 5' : undefined
         },
         type: 'smoothstep',
         markerEnd: {
@@ -257,7 +261,10 @@ function createFlowElements(flow: Flow): {
           height: 15,
           color: edgeColor,
         },
-        data: { color: edgeColor }
+        data: { 
+          color: edgeColor,
+          isAutoParent
+        }
       };
     }) || []
   );
@@ -272,6 +279,7 @@ function createFlowElements(flow: Flow): {
     const nodeColor = nodePathColors.get(process.id) || "#d1d5db";
     const isCompleted = process.status === "completed";
     const isPending = process.status === "pending";
+    const isAutoParent = process.autoParent === true;
 
     let backgroundColor = `color-mix(in srgb, ${nodeColor}, white 70%)`;
     const statusColor = isCompleted 
@@ -300,6 +308,13 @@ function createFlowElements(flow: Flow): {
             <div className="font-medium flex items-center justify-center gap-2">
               {processName}
               {statusIcon}
+              {isAutoParent && (
+                <Link2 
+                  className="h-3.5 w-3.5 text-indigo-500" 
+                  aria-label="Auto-linked via stack trace"
+                  data-tooltip="Auto-linked via stack trace"
+                />
+              )}
             </div>
             <div className="mt-1">
               {(process.createdAt || process.timestamp) && (
@@ -330,7 +345,7 @@ function createFlowElements(flow: Flow): {
       style: {
         minWidth: "180px",
         padding: "4px",
-        border: "1px solid",
+        border: isAutoParent ? "1px dashed" : "1px solid",
         borderRadius: "4px",
         background: backgroundColor,
         borderColor: nodeColor

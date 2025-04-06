@@ -16,6 +16,7 @@ type IngestRequest = {
   parentIds?: string[];
   completedAt?: number;
   stackTrace?: StackFrame[];
+  autoParent?: boolean; // Track processes with automatically assigned parents
 };
 
 // POST handler for storing new processes
@@ -45,7 +46,8 @@ export async function POST(request: NextRequest) {
       status: body.status,
       parentIds: body.parentIds || existingProcess?.parentIds || [],
       completedAt: body.status === "completed" ? (body.completedAt || now) : existingProcess?.completedAt,
-      stackTrace: body.stackTrace || existingProcess?.stackTrace
+      stackTrace: body.stackTrace || existingProcess?.stackTrace,
+      autoParent: body.autoParent !== undefined ? body.autoParent : existingProcess?.autoParent
     };
 
     // Store the process using the composite key

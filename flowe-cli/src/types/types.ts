@@ -19,6 +19,7 @@ export interface Process {
 	flowName?: string; // Display name of the flow
 	parentIds?: string[]; // IDs of parent processes
 	stackTrace?: StackFrame[]; // Stack trace at process creation time
+	autoParent?: boolean; // Indicates if parent was automatically assigned via stack trace
 }
 
 // A Flow represents a directed graph of processes

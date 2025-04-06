@@ -21,6 +21,7 @@ export interface FlowEvent {
 	flowId: string;
 	flowName?: string;
 	stackTrace?: StackFrame[];
+	autoParent?: boolean;
 }
 
 /**
@@ -343,6 +344,7 @@ export class Flowe {
 
 			// Determine parent IDs
 			let parentIds: string[] = [];
+			let autoParent = false;
 			
 			if (parents) {
 				// Use explicitly provided parents
@@ -352,6 +354,7 @@ export class Flowe {
 				const potentialParent = this.findParentByStackTrace(stackTrace);
 				if (potentialParent) {
 					parentIds = [potentialParent];
+					autoParent = true; // Mark as automatically assigned
 				}
 			}
 
@@ -360,6 +363,7 @@ export class Flowe {
 				createdAt: Date.now(),
 				args,
 				parentIds,
+				autoParent,
 				flowId: flowId,
 				flowName: this.activeFlowName,
 				completed: false,
@@ -379,6 +383,7 @@ export class Flowe {
 					flowId: flowId,
 					flowName: this.activeFlowName,
 					parentIds,
+					autoParent,
 					stackTrace
 				}
 			);
