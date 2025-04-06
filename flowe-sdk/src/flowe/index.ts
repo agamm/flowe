@@ -270,62 +270,54 @@ export class Flowe {
 		// Convert map to array for filtering
 		const processes = Array.from(globalFlows.values());
 		
-		// Consider all processes in the current flow
+		// Consider only active processes in the current flow
 		const flowProcesses = processes.filter(process => 
-			process.flowId === this.activeFlowId
+			process.flowId === this.activeFlowId &&
+			!process.completed
 		);
 		
 		if (flowProcesses.length === 0) return undefined;
 		
-		// Find the caller functions (exclude our own internal functions)
-		const callerFuncs = stackTrace
-			.filter(frame => 
-				!frame.func.includes('start') && 
-				!frame.func.includes('Flowe')
-			)
-			.map(frame => frame.func);
+		// Get the call path (excluding Flowe internal functions)
+		const currentCallPath = stackTrace
+			.map(frame => frame.func)
+			.filter(func => !func.includes('Flowe') && !func.includes('getStackTrace'));
 		
-		if (callerFuncs.length === 0) return undefined;
+		if (currentCallPath.length === 0) return undefined;
 		
-		// Create a map of process IDs to their matching score
-		const processMatches: Map<string, number> = new Map();
+		let bestMatchId: string | undefined;
+		let bestMatchDepth = 0;
+		let bestMatchTime = 0;
 		
-		// Find processes that share functions with our stack trace
+		// Find the process with the longest matching call path
 		for (const process of flowProcesses) {
 			if (!process.stackTrace?.length) continue;
 			
-			const processFuncs = process.stackTrace.map(frame => frame.func);
-			let matchCount = 0;
+			// Get the process call path (excluding Flowe internal functions)
+			const processCallPath = process.stackTrace
+				.map(frame => frame.func)
+				.filter(func => !func.includes('Flowe') && !func.includes('getStackTrace'));
 			
-			// Count matches between caller functions and process functions
-			for (const func of callerFuncs) {
-				if (processFuncs.includes(func) && process.id !== func) {
-					matchCount++;
+			if (processCallPath.length === 0) continue;
+			
+			// Find longest common prefix in the call paths (starting from index 0)
+			let matchDepth = 0;
+			while (
+				matchDepth < Math.min(currentCallPath.length, processCallPath.length) &&
+				currentCallPath[matchDepth] === processCallPath[matchDepth]
+			) {
+				matchDepth++;
+			}
+			
+			// Only consider it a match if we have a common ancestor path
+			if (matchDepth > 0) {
+				// Prioritize by match depth, then by recency
+				if (matchDepth > bestMatchDepth || 
+					(matchDepth === bestMatchDepth && process.createdAt > bestMatchTime)) {
+					bestMatchId = process.id;
+					bestMatchDepth = matchDepth;
+					bestMatchTime = process.createdAt;
 				}
-			}
-			
-			if (matchCount > 0) {
-				processMatches.set(process.id, matchCount);
-			}
-		}
-		
-		if (processMatches.size === 0) return undefined;
-		
-		// Find process with highest match count
-		let bestMatchId: string | undefined;
-		let bestMatchScore = 0;
-		let bestMatchTime = 0;
-		
-		for (const [processId, score] of processMatches.entries()) {
-			const process = globalFlows.get(processId);
-			if (!process) continue;
-			
-			// Prioritize by match score, then by recency
-			if (score > bestMatchScore || 
-				(score === bestMatchScore && process.createdAt > bestMatchTime)) {
-				bestMatchId = processId;
-				bestMatchScore = score;
-				bestMatchTime = process.createdAt;
 			}
 		}
 		

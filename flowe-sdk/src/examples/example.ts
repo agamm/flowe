@@ -16,13 +16,18 @@ async function exampleLog(message: string, data: any): Promise<void> {
   f.end(logId, { success: true, timestamp: new Date().toISOString() });
 }
 
+async function dummyParent() {
+  exampleLog("Dummy parent started", { message: "Dummy parent" });
+}
+
 // Function to handle geocoding operations
 async function runGeocoding(city: string, parentId: string | undefined): Promise<{ latitude: number, longitude: number, toolId: string }> {
   // Run geocoding tool as a separate branch from city extractor
   const geoToolId = f.start("geocodingTool", { location: city }, parentId);
   
   // Call logging function for geocoding
-  await exampleLog("Geocoding started", { location: city });
+  // await exampleLog("Geocoding started", { location: city });
+  await dummyParent();
   
   // Simulate longer processing time for geocoding
   await wait(1000);
@@ -39,7 +44,8 @@ async function runWeatherTool(coordinates: { lat: number, lng: number }, parentI
   const weatherToolId = f.start("weatherTool", { coordinates }, parentId);
   
   // Call logging function for weather
-  await exampleLog("Weather check started", { coordinates });
+  // await exampleLog("Weather check started", { coordinates });
+  await dummyParent();
   
   // Simulate API delay for weather data
   await wait(1000);
