@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { createFlowe } from '../flowe';
 
 // Define a type for the private method we're accessing
@@ -84,5 +84,60 @@ describe('Stack Trace Functionality', () => {
       expect(secondLastFunc).toContain('level2');
       expect(thirdLastFunc).toContain('level1');
     }
+  });
+
+  it.only('should correctly parse webpack-internal stack traces', () => {
+    const flowe = createFlowe({
+      enabled: true,
+      ingestEndpoint: 'http://test.endpoint'
+    });
+    
+    // Webpack-internal style stack trace
+    const mockStackTrace = `Error: 
+    at Flowe.getStackTrace (webpack-internal:///(action-browser)/../../node_modules/.pnpm/flowe@0.2.9_@opentelemetry+api@1.9.0_@types+react-dom@19.0.3_@types+react@19.0.8__@types+react@19.0.8/node_modules/flowe/dist/sdk/index.js:136:23)
+    at Flowe.start (webpack-internal:///(action-browser)/../../node_modules/.pnpm/flowe@0.2.9_@opentelemetry+api@1.9.0_@types+react-dom@19.0.3_@types+react@19.0.8__@types+react@19.0.8/node_modules/flowe/dist/sdk/index.js:226:37)
+    at extractPropertyTypeAction (webpack-internal:///(action-browser)/../../packages/ai/workflows/extract_v1/tasks/extractPropertyType.ts:27:42)
+    at processExtraction (webpack-internal:///(action-browser)/../../packages/ai/workflows/extract_v1/index.ts:164:98)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async runExtraction (webpack-internal:///(action-browser)/./src/app/(sidebar)/extract/actions/extract.ts:130:9)`;
+    
+    // Call parseStackTrace directly instead of mocking Error
+    const stackTrace = (flowe as any).parseStackTrace(mockStackTrace);
+    
+    // Verify structure
+    expect(Array.isArray(stackTrace)).toBe(true);
+    expect(stackTrace.length).toBe(4); // 4 after filtering out node:internal and getStackTrace
+    
+    // Verify first frame (which should be runExtraction after reversing)
+    expect(stackTrace[0]).toEqual({
+      file: 'webpack-internal:///(action-browser)/./src/app/(sidebar)/extract/actions/extract.ts',
+      func: 'runExtraction',
+      line: '130'
+    });
+    
+    // Verify second frame (skipping node:internal which should be filtered)
+    expect(stackTrace[1]).toEqual({
+      file: 'webpack-internal:///(action-browser)/../../packages/ai/workflows/extract_v1/index.ts',
+      func: 'processExtraction',
+      line: '164'
+    });
+    
+    // Verify third frame
+    expect(stackTrace[2]).toEqual({
+      file: 'webpack-internal:///(action-browser)/../../packages/ai/workflows/extract_v1/tasks/extractPropertyType.ts',
+      func: 'extractPropertyTypeAction',
+      line: '27'
+    });
+    
+    // Verify fourth frame (should be Flowe.start after filtering out getStackTrace)
+    expect(stackTrace[3]).toEqual({
+      file: 'webpack-internal:///(action-browser)/../../node_modules/.pnpm/flowe@0.2.9_@opentelemetry+api@1.9.0_@types+react-dom@19.0.3_@types+react@19.0.8__@types+react@19.0.8/node_modules/flowe/dist/sdk/index.js',
+      func: 'Flowe.start',
+      line: '226'
+    });
+    
+    // Verify getStackTrace itself was filtered out
+    const hasGetStackTrace = stackTrace.some(frame => frame.func.includes('getStackTrace'));
+    expect(hasGetStackTrace).toBe(false);
   });
 }); 

@@ -90,7 +90,7 @@ export interface FloweOptions {
 const globalFlows = new Map<string, FlowEvent>();
 
 import { Queue, QueueItem } from './queue.js';
-
+import fs from 'fs';
 export class Flowe {
 	private ingestEndpoint = "http://localhost:27182/api/flow";
 	private activeFlowId?: string;
@@ -231,32 +231,40 @@ export class Flowe {
 	 * Gets the full stack trace as an array of structured trace objects
 	 * Based on NodeJS best practices for capturing stack traces
 	 */
-	public getStackTrace(): StackFrame[] {
+	public getStackTrace(id: string): StackFrame[] {
 		const error = new Error();
 		if (!error.stack) return [];
 		
-		const lines = error.stack.split('\n').slice(1); // Skip the first line which is just "Error"
+		return this.parseStackTrace(error.stack);
+	}
+
+	public parseStackTrace(stackTrace: string): StackFrame[] {
+		const lines = stackTrace.split('\n').slice(1); // Skip the first line which is just "Error"
 		
-		return lines
+		const stackTraceParsed = lines
 			.map(line => {
 				// Parse stack trace lines like: "at function (file:line:column)"
-				const match = line.trim().match(/at\s+(?:(.+?)\s+\((.+?):(\d+)(?::\d+)?\)|(.+?):(\d+)(?::\d+)?)/);
+				const match = line.trim().match(/at\s+(.*?)\s\((.*?):(\d+):\d+\)/);
 				if (!match) return null;
 				
 				// Either format: "at function (file:line:column)" or "at file:line:column"
 				const func = match[1] || '(anonymous)';
-				const file = match[2] || match[4] || '';
-				const lineNum = match[3] || match[5] || '0';
+				const file = match[2] || '<unknown>';
+				const lineNum = match[3] || '<unknown>';
 				
 				// Remove "async " prefix from function names
 				const cleanFunc = func.replace(/^async\s+/, '');
 				
 				return { file, func: cleanFunc, line: lineNum } as StackFrame;
-			})
+			});
+
+		// console.log("stackTrace!!", stackTraceParsed);
+
+		return stackTraceParsed
 			.filter((item): item is StackFrame => 
 				item !== null && 
 				!item.file.includes('node:internal') && 
-				!item.file.includes('node_modules') &&
+				// !item.file.includes('node_modules') &&
 				!item.func.includes('getStackTrace') // Filter out our own getStackTrace calls
 			)
 			.reverse(); // Reverse the order to show the innermost function call first
@@ -331,7 +339,7 @@ export class Flowe {
 			const flowId = this.activeFlowId!;
 
 			// Capture stack trace
-			const stackTrace = this.getStackTrace();
+			const stackTrace = this.getStackTrace(id);
 
 			// Determine parent IDs
 			let parentIds: string[] = [];
