@@ -231,7 +231,7 @@ export class Flowe {
 	 * Gets the full stack trace as an array of structured trace objects
 	 * Based on NodeJS best practices for capturing stack traces
 	 */
-	public getStackTrace(id: string): StackFrame[] {
+	public getStackTrace(): StackFrame[] {
 		const error = new Error();
 		if (!error.stack) return [];
 		
@@ -264,7 +264,8 @@ export class Flowe {
 			.filter((item): item is StackFrame => 
 				item !== null && 
 				!item.file.includes('node:internal') && 
-				// !item.file.includes('node_modules') &&
+				item.func != 'eval' &&
+				// !item.file.includes('node_modules') && // breaks webpack internal stack traces
 				!item.func.includes('getStackTrace') // Filter out our own getStackTrace calls
 			)
 			.reverse(); // Reverse the order to show the innermost function call first
@@ -339,7 +340,7 @@ export class Flowe {
 			const flowId = this.activeFlowId!;
 
 			// Capture stack trace
-			const stackTrace = this.getStackTrace(id);
+			const stackTrace = this.getStackTrace();
 
 			// Determine parent IDs
 			let parentIds: string[] = [];
@@ -435,7 +436,7 @@ export class Flowe {
 
 			// Warn about potential race conditions with auto-linked processes and non-suffixed IDs
 			if (flow.autoParent && !id.includes('-')) {
-				console.warn(`⚠️ Process ${id} was auto-linked to parent but is being ended with a non-unique ID. Always use the ID returned from f.start() to avoid race conditions.`);
+				console.warn(`⚠️ Process ${id} was auto-linked to parent but is being ended with a non-unique ID. Always use the ID returned from f.start() to avoid race conditions.`, flow.stackTrace?.map(frame => `${frame.file}:${frame.func}`).join('->'));
 			}
 
 			const parentIds = flow.parentIds || [];
