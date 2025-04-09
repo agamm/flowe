@@ -11,7 +11,19 @@ import { f } from 'flowe';
 // Enable the SDK
 f.setEnabled(true);
 
-// Start a flow
+const func = (a) => {
+  console.log("Doing work on:", a)
+}
+
+// Using the track method to automatically instrument functions
+const result = await f.track(
+  async () => a("123"),
+  [{ a: '123' }],  // Parameters (optional)
+  'custom-process-name',      // Custom ID (optional)
+  ['parent-process-id']       // Parent process IDs (optional)
+);
+
+// Using start/end for manual instrumentation
 const flowId = f.start('process-name', { input: 'data' });
 
 // Do some work...
@@ -40,6 +52,7 @@ const f = new Flowe({
 
 - `f.start(id, args, parents?)` - Start a process
 - `f.end(id, output)` - End a process with output
+- `f.track(fn, params?, id?, parents?)` - Automatically wrap a function with start/end calls
 - `f.setEnabled(boolean)` - Enable/disable flow processing
 - `f.setIngestEndpoint(url)` - Change the server endpoint
 - `f.renameFlow(flowId)` - Rename the active flow (used in the sidebar name)
