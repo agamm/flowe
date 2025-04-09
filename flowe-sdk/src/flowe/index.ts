@@ -291,11 +291,11 @@ export class Flowe {
 				process.flowId === this.activeFlowId && 
 				!process.completed &&
 				process.stackTrace?.length &&
-				process.stackTrace[process.stackTrace.length - 1].func.includes('start') &&
+				(process.stackTrace[process.stackTrace.length - 1].func.includes('start') || 
+				 process.stackTrace[process.stackTrace.length - 2].func.includes('track')) &&
 				(process.stackTrace[process.stackTrace.length - 1].func.includes('Flowe.') || 
 				 process.stackTrace[process.stackTrace.length - 1].func.includes('f.'))
 			);
-		
 		if (!potentialParents.length) return undefined;
 		
 		// Find the best parent (longest stack trace prefix that's not identical to current)
