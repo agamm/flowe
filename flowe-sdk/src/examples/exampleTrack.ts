@@ -1,69 +1,88 @@
 import { f } from "../flowe/index.js";
 
-// Helper function to wait for x ms
 const wait = (ms: number): Promise<void> => {
   return new Promise(resolve => setTimeout(resolve, ms));
 };
 
-/**
- * Runs the first process
- */
-async function runProcess1() {
-  // Start Process 1
-  const process1Id = f.start("process1", { message: "Starting first process" });
-  console.log("Process 1 started");
-  
-  // Wait for 1 second
+async function runProcess1(param: string) {
+  console.log(`Process 1 started - ${param}`);
   await wait(1000);
   
-  // End Process 1
-  f.end(process1Id, { status: "completed", message: "First process completed" });
-  console.log("Process 1 completed");
+  // Process2 is tracked inside Process1
+  // Using the {paramName: paramValue} format
+  const process2Result = await f.track(
+    () => runProcess2("Param 2"), 
+    [{ param: "Param 2" }]
+  );
+  console.log("Process 2 result:", process2Result);
   
-  return process1Id;
+  return { status: "completed", message: "Both processes completed", param };
 }
 
-/**
- * Runs the second process with a parent process
- */
-async function runProcess2(parentId: string) {
-  // Start Process 2 with Process 1 as parent
-  const process2Id = f.start("process2", { message: "Starting second process" }, parentId);
-  console.log("Process 2 started with parent:", parentId);
-  
-  // Wait for 1 second
+async function runProcess2(param: string) {
+  console.log(`Process 2 started - ${param}`);
   await wait(1000);
-  
-  // End Process 2
-  const result = f.end(process2Id, { status: "completed", message: "Second process completed" });
-  console.log("Process 2 completed");
-  
-  return result;
+    
+  return { status: "completed", message: "Second process completed", param };
 }
 
-/**
- * Simple example demonstrating parent-child process relationship:
- * Process 1 -> Process 2
- */
+async function errorProcess(reason: string) {
+  console.log(`Error process started - ${reason}`);
+  await wait(500);
+  
+  throw new Error(`This process failed intentionally: ${reason}`);
+}
+
 async function simpleProcessFlow() {
-  // By default the sdk doesn't send info (for production)
+  console.log("Starting flow process with named parameters");
   f.setEnabled(true);
   
-  const process1Id = await runProcess1();
-  // Handle the case where process1Id might be undefined
-  if (!process1Id) {
-    console.warn("Process 1 did not return a valid ID");
-    return undefined;
+  // Using a variable with the {paramName: paramValue} format
+  const param = "Param 1";
+  const process1Result = await f.track(
+    () => runProcess1(param), 
+    [{ param: param }]
+  );
+  console.log("Process 1 result:", process1Result);
+  
+  // Error handling example with named parameter
+  try {
+    const errorReason = "Testing error handling";
+    await f.track(
+      () => errorProcess(errorReason), 
+      [{ reason: errorReason }]
+    );
+  } catch (err: unknown) {
+    console.log("Error caught:", err instanceof Error ? err.message : String(err));
   }
   
-  const result = await runProcess2(process1Id);
+  // Multiple parameters in a single object
+  await f.track(
+    async () => {
+      console.log("Function with multiple parameters");
+      await wait(500);
+      return "done";
+    },
+    [{ 
+      name: "multiParam", 
+      count: 123, 
+      isActive: true 
+    }]
+  );
   
-  return result;
+  // You can also pass unnamed parameters
+  await f.track(
+    async () => {
+      console.log("Simple function with unnamed parameters");
+      await wait(500);
+      return "done";
+    },
+    ["first param", 123, true]
+  );
 }
 
 simpleProcessFlow()
-  .then(result => {
+  .then(() => {
     console.log("Simple process flow completed!");
-    console.log("\nResult:", result);
   })
   .catch(error => console.error("Process flow error:", error));
