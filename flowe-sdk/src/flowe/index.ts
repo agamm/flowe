@@ -436,7 +436,7 @@ export class Flowe {
 
 			// Warn about potential race conditions with auto-linked processes and non-suffixed IDs
 			if (flow.autoParent && !id.includes('-')) {
-				console.warn(`⚠️ Process ${id} was auto-linked to parent but is being ended with a non-unique ID. Always use the ID returned from f.start() to avoid race conditions.`, flow.stackTrace?.map(frame => `${frame.file}:${frame.func}`).join('->'));
+				console.warn(`⚠️ Process ${id} was auto-linked to parent but is being ended with a non-unique ID. Always use the ID returned from f.start() to avoid race conditions.`, flow.stackTrace?.map(frame => `${frame.file.split('/').pop()}:${frame.func}`).join('->'));
 			}
 
 			const parentIds = flow.parentIds || [];
@@ -468,6 +468,74 @@ export class Flowe {
 			return completedFlow as CompletedFlowEvent;
 		} catch (error) {
 			return this.handleError(error, "Failed to end process");
+		}
+	}
+
+	/**
+	 * Wraps a function with automatic tracking, calling start before and end after execution
+	 * @param fn The function to wrap with tracking
+	 * @param params Optional array of parameters - can be plain values or {paramName: paramValue} objects
+	 * @param id Optional custom ID to use instead of function name
+	 * @param parentId Optional parent process ID
+	 * @returns The result of the function execution
+	 */
+	async track<T>(
+		fn: (...args: any) => Promise<T> | T, 
+		params?: Array<string | number | boolean | Record<string, any>>,
+		id?: string,
+		parentId?: string
+	): Promise<T> {
+		// Extract function name from string representation or use provided id
+		const fnString = fn.toString();
+		let functionName = id || "unknown";
+		
+		// Try to get function name if not provided
+		if (!id) {
+			// Try to match patterns for function name extraction
+			const funcMatch = fnString.match(/(?:async\s+)?function\s+([a-zA-Z0-9_$]+)/);
+			const boundMatch = fnString.match(/\(\)\s*=>\s*([a-zA-Z0-9_$]+)\(/);
+			
+			if (funcMatch && funcMatch[1]) {
+				functionName = funcMatch[1];
+			} else if (boundMatch && boundMatch[1]) {
+				functionName = boundMatch[1];
+			}
+		}
+
+		// Process parameters
+		let processParams: Record<string, unknown> = {};
+		
+		if (params && params.length > 0) {
+			// Process each parameter
+			params.forEach((param, index) => {
+				if (param !== null && typeof param === 'object') {
+					// It's an object with key-value pairs
+					// Each key is a parameter name, and its value is the parameter value
+					Object.entries(param).forEach(([key, value]) => {
+						processParams[key] = value;
+					});
+				} else {
+					// Unnamed parameter, use index as key
+					processParams[`param${index + 1}`] = param;
+				}
+			});
+		}
+		
+		// Start tracking the function with processed parameters
+		const processId = this.start(functionName, processParams, parentId);
+		
+		try {
+			// Execute the function
+			const result = await fn();
+			
+			// End tracking with the result
+			this.end(processId, result);
+			
+			return result;
+		} catch (error) {
+			// End tracking with the error
+			this.end(processId, { error: error instanceof Error ? error.message : String(error) });
+			throw error;
 		}
 	}
 

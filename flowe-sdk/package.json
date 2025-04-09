@@ -25,6 +25,7 @@
 		"example": "npm run build && node dist/examples/example.js",
 		"performance": "npm run build && node dist/examples/performance-test-final.js",
 		"race": "npm run build && node dist/examples/exampleRace.js",
+		"track": "npm run build && node dist/examples/exampleTrack.js",
 		"test": "vitest",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage"
