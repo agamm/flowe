@@ -476,14 +476,14 @@ export class Flowe {
 	 * @param fn The function to wrap with tracking
 	 * @param params Optional array of parameters - can be plain values or {paramName: paramValue} objects
 	 * @param id Optional custom ID to use instead of function name
-	 * @param parentId Optional parent process ID
+	 * @param parents Optional parent process ID or array of parent process IDs
 	 * @returns The result of the function execution
 	 */
 	async track<T>(
 		fn: (...args: any) => Promise<T> | T, 
 		params?: Array<string | number | boolean | Record<string, any>>,
 		id?: string,
-		parentId?: string
+		parents?: string | string[]
 	): Promise<T> {
 		// Extract function name from string representation or use provided id
 		const fnString = fn.toString();
@@ -522,7 +522,7 @@ export class Flowe {
 		}
 		
 		// Start tracking the function with processed parameters
-		const processId = this.start(functionName, processParams, parentId);
+		const processId = this.start(functionName, processParams, parents);
 		
 		try {
 			// Execute the function
