@@ -436,7 +436,7 @@ export class Flowe {
 
 			// Warn about potential race conditions with auto-linked processes and non-suffixed IDs
 			if (flow.autoParent && !id.includes('-')) {
-				console.warn(`⚠️ Process ${id} was auto-linked to parent but is being ended with a non-unique ID. Always use the ID returned from f.start() to avoid race conditions.`, flow.stackTrace?.map(frame => `${frame.file}:${frame.func}`).join('->'));
+				console.warn(`⚠️ Process ${id} was auto-linked to parent but is being ended with a non-unique ID. Always use the ID returned from f.start() to avoid race conditions.`, flow.stackTrace?.map(frame => `${frame.file.split('/').pop()}:${frame.func}`).join('->'));
 			}
 
 			const parentIds = flow.parentIds || [];
