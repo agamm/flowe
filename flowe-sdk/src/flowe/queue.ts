@@ -100,10 +100,6 @@ export class Queue {
           console.log(`Attempt ${attempt+1}/${maxAttempts} for item ${item.id}`);
         }
         
-        // Log request details
-        console.log(`Sending request to ${this.options.endpoint} for item ${item.id}:`, 
-          JSON.stringify(item.payload).substring(0, 200) + "...");
-        
         const response = await fetch(this.options.endpoint, {
           method: this.options.method,
           headers: this.options.headers,
@@ -117,7 +113,6 @@ export class Queue {
         }
         
         const responseData = await response.json();
-        console.log(`Server response for ${item.id}:`, responseData);
         
         if (!responseData.success) {
           throw new Error(`Server did not confirm success for process ${item.payload.id}`);

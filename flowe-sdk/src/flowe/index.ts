@@ -90,7 +90,7 @@ export interface FloweOptions {
 const globalFlows = new Map<string, FlowEvent>();
 
 import { Queue, QueueItem } from './queue.js';
-import fs from 'fs';
+
 export class Flowe {
 	private ingestEndpoint = "http://localhost:27182/api/flow";
 	private activeFlowId?: string;
@@ -476,14 +476,14 @@ export class Flowe {
 	 * @param fn The function to wrap with tracking
 	 * @param params Optional array of parameters - can be plain values or {paramName: paramValue} objects
 	 * @param id Optional custom ID to use instead of function name
-	 * @param parents Optional parent process ID or array of parent process IDs
+	 * @param parents Optional array of parent process IDs
 	 * @returns The result of the function execution
 	 */
 	async track<T>(
 		fn: (...args: any) => Promise<T> | T, 
 		params?: Array<string | number | boolean | Record<string, any>>,
 		id?: string,
-		parents?: string | string[]
+		parents?: string[]
 	): Promise<T> {
 		// Extract function name from string representation or use provided id
 		const fnString = fn.toString();
