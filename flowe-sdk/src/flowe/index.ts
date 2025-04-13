@@ -101,6 +101,7 @@ export class Flowe {
 	private maxRetries = 3;
 	private queue: Queue;
 	private successfullySentProcesses = new Set<string>();
+	private hasShownDisabledWarning = false;
 
 	constructor(options?: FloweOptions) {
 		if (options) {
@@ -140,6 +141,8 @@ export class Flowe {
 	 */
 	setEnabled(enabled: boolean): void {
 		this.enabled = enabled;
+		// Reset warning flag when enabling/disabling to ensure proper behavior on status changes
+		this.hasShownDisabledWarning = false;
 	}
 
 	/**
@@ -317,7 +320,10 @@ export class Flowe {
 	 */
 	start(id: string, args: unknown, parents?: string | string[]): string | undefined {
 		if (!this.enabled) {
-			console.warn("⚠️ Flowe SDK is disabled. To send data to the server, call f.setEnabled(true) first.");
+			if (!this.hasShownDisabledWarning) {
+				console.warn("⚠️ Flowe SDK is disabled. To send data to the server, call f.setEnabled(true) first.");
+				this.hasShownDisabledWarning = true;
+			}
 			return id;
 		}
 
@@ -414,7 +420,10 @@ export class Flowe {
 	 */
 	end(id: string | undefined, output: unknown): CompletedFlowEvent | undefined {
 		if (!this.enabled) {
-			console.warn("⚠️ Flowe SDK is disabled. To send data to the server, call f.setEnabled(true) first.");
+			if (!this.hasShownDisabledWarning) {
+				console.warn("⚠️ Flowe SDK is disabled. To send data to the server, call f.setEnabled(true) first.");
+				this.hasShownDisabledWarning = true;
+			}
 			return;
 		}
 
