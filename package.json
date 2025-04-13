@@ -30,7 +30,9 @@
   "exports": {
     ".": {
       "types": "./dist/sdk.d.ts",
-      "import": "./dist/sdk.js"
+      "import": "./dist/sdk.js",
+      "require": "./dist/sdk.js",
+      "default": "./dist/sdk.js"
     }
   },
   "bin": {
